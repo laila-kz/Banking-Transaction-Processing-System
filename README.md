@@ -77,22 +77,146 @@ This repository delivers an end-to-end banking core capable of handling high-con
 
 ---
 
-## 🗄️ System Architecture & Schema
+## 🗄️ Database Design & Entity Relationship Diagram (ERD)
 
-The relational schema is modeled in `schema/init_schema.sql` (and visualizable with `schema/schema.puml`):
+The system enforces strict relational integrity across 10 core tables with double-entry bookkeeping and auditing:
 
-| Table | Purpose |
-| :--- | :--- |
-| **`customers`** | Core user identity, credit scores, demographics, and active account status. |
-| **`accounts`** | Checking, Savings, and Money Market accounts with isolated balances. |
-| **`cards`** | Tokenized payment cards (Debit/Credit) linked to customer accounts. |
-| **`mcc`** | Merchant Category Codes reference dataset. |
-| **`merchants`** | Merchant profiles, business classifications, and risk flags. |
-| **`transactions`** | Immutable financial transaction log with reference numbers and UUIDs. |
-| **`account_ledger`** | Double-entry journal entries linking transactions to account balances. |
-| **`idempotency_requests`** | Request hash registry to guarantee at-most-once execution. |
-| **`audit_log`** | Comprehensive security and operation audit trail. |
-| **`transaction_errors`** | Diagnostic logging for retries and system exceptions. |
+```mermaid
+erDiagram
+    customers ||--o{ accounts : "owns"
+    customers ||--o{ cards : "owns"
+    accounts ||--o{ cards : "funds"
+    customers ||--o{ transactions : "initiates"
+    accounts ||--o{ transactions : "source_or_destination"
+    cards ||--o{ transactions : "card_used"
+    merchants ||--o{ transactions : "processes"
+    mcc ||--o{ merchants : "classifies"
+    accounts ||--o{ account_ledger : "posts_to"
+    transactions ||--o{ account_ledger : "recorded_as"
+    customers ||--o{ audit_log : "tracked_for"
+    accounts ||--o{ audit_log : "tracked_for"
+    transactions ||--o{ audit_log : "tracked_for"
+    transactions ||--o{ idempotency_requests : "locks"
+
+    customers {
+        int customer_id PK
+        string full_name
+        string email UK
+        string phone
+        string account_status
+        int credit_score
+        decimal yearly_income
+        decimal total_debt
+    }
+
+    accounts {
+        bigint account_id PK
+        int customer_id FK
+        string account_number UK
+        string account_type
+        string currency
+        decimal balance
+        decimal available_balance
+        string status
+    }
+
+    cards {
+        int card_id PK
+        int customer_id FK
+        bigint account_id FK
+        string card_brand
+        string card_type
+        string card_token UK
+        string card_last_four
+        string expires
+        string card_status
+    }
+
+    mcc {
+        string mcc_code PK
+        string mcc_description
+    }
+
+    merchants {
+        bigint merchant_id PK
+        string mcc_code FK
+        string merchant_name
+        string merchant_city
+        string merchant_state
+        tinyint flag
+        string active_status
+    }
+
+    transactions {
+        bigint transaction_id PK
+        string transaction_uuid UK
+        string reference_number UK
+        string transaction_type
+        string status
+        int customer_id FK
+        bigint source_account_id FK
+        bigint destination_account_id FK
+        int card_id FK
+        bigint merchant_id FK
+        decimal amount
+        string currency
+        string idempotency_key UK
+        datetime transaction_date
+    }
+
+    account_ledger {
+        bigint ledger_id PK
+        bigint account_id FK
+        bigint transaction_id FK
+        string entry_direction
+        decimal amount
+        decimal balance_after
+        string description
+    }
+
+    idempotency_requests {
+        string idempotency_key PK
+        string request_type
+        string request_hash
+        bigint transaction_id FK
+    }
+
+    audit_log {
+        bigint audit_id PK
+        string operation_type
+        string status
+        string table_affected
+        int customer_id FK
+        bigint account_id FK
+        bigint transaction_id FK
+        string actor
+    }
+
+    transaction_errors {
+        bigint error_id PK
+        bigint transaction_id FK
+        bigint account_id FK
+        string error_code
+        string error_message
+        string operation_name
+        tinyint retryable
+    }
+```
+
+### Table Breakdown
+
+| Table | Primary Key | Foreign Keys | Key Responsibilities |
+| :--- | :--- | :--- | :--- |
+| **`customers`** | `customer_id` | — | User profiles, KYC status, demographic data, and credit ratings. |
+| **`accounts`** | `account_id` | `customer_id` | Financial accounts (Checking, Savings, Loan) with real-time balance checks. |
+| **`cards`** | `card_id` | `customer_id`, `account_id` | Debit and Credit cards with tokenized identifiers (`card_token`). |
+| **`mcc`** | `mcc_code` | — | Merchant Category Codes (ISO 18245 standard classification). |
+| **`merchants`** | `merchant_id` | `mcc_code` | Merchant registry with category mapping, geolocation, and risk scoring. |
+| **`transactions`** | `transaction_id` | `customer_id`, `source_account_id`, `destination_account_id`, `card_id`, `merchant_id` | Immutable ledger of all debits, credits, transfers, and purchases. |
+| **`account_ledger`** | `ledger_id` | `account_id`, `transaction_id` | Double-entry journal records guaranteeing auditable balance history. |
+| **`idempotency_requests`** | `idempotency_key` | `transaction_id` | Deduplication store with SHA-256 payload hashing. |
+| **`audit_log`** | `audit_id` | `customer_id`, `account_id`, `transaction_id`, `card_id` | Security and compliance event trail. |
+| **`transaction_errors`** | `error_id` | `transaction_id`, `account_id`, `card_id` | Failure telemetry and retry classification. |
 
 ---
 
