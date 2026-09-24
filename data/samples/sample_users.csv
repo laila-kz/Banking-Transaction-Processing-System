@@ -1,0 +1,4 @@
+id,current_age,retirement_age,birth_year,birth_month,gender,address,latitude,longitude,per_capita_income,yearly_income,total_debt,credit_score,num_credit_cards
+0,53,66,1973,11,Female,4844 Campbell Walk Apt. 945,39.1082,-84.4533,$28205,$59696,$12765,687,2
+1,45,65,1981,4,Male,123 Main Street,40.7128,-74.0060,$45000,$95000,$5000,750,3
+2,29,67,1997,8,Female,789 Market Blvd,34.0522,-118.2437,$32000,$68000,$20000,640,1

@@ -1,0 +1,2 @@
+# This directory holds large dataset files which are ignored by git.
+# Sample data for development and testing is located in data/samples/

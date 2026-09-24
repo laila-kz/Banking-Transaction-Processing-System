@@ -1,0 +1,116 @@
+@startuml
+' Banking schema ERD
+
+hide methods
+hide stereotypes
+skinparam linetype ortho
+skinparam entity {
+	BackgroundColor #FDFDFD
+	BorderColor #333333
+}
+
+entity "Customer" as customer {
+	* customer_id : INT <<PK>>
+	--
+	full_name : VARCHAR(200)
+	email : VARCHAR(255)
+	phone : VARCHAR(30)
+	account_status : ENUM
+	credit_score : INT
+	yearly_income : DECIMAL(14,2)
+	total_debt : DECIMAL(14,2)
+}
+
+entity "Account" as account {
+	* account_id : BIGINT <<PK>>
+	--
+	customer_id : INT <<FK>>
+	account_number : CHAR(20) <<UNIQUE>>
+	account_type : ENUM
+	balance : DECIMAL(18,2)
+	available_balance : DECIMAL(18,2)
+	status : ENUM
+}
+
+entity "Card" as card {
+	* card_id : INT <<PK>>
+	--
+	customer_id : INT <<FK>>
+	account_id : BIGINT <<FK>>
+	card_brand : VARCHAR(20)
+	card_type : VARCHAR(30)
+	card_token : CHAR(64) <<UNIQUE>>
+	card_last_four : CHAR(4)
+	expires : CHAR(7)
+	card_status : ENUM
+}
+
+entity "MCC" as mcc {
+	* mcc_code : VARCHAR(10) <<PK>>
+	--
+	mcc_description : VARCHAR(100)
+}
+
+entity "Merchant" as merchant {
+	* merchant_id : BIGINT <<PK>>
+	--
+	mcc_code : VARCHAR(10) <<FK>>
+	merchant_name : VARCHAR(255)
+	merchant_city : VARCHAR(100)
+	merchant_state : VARCHAR(50)
+	flag : TINYINT
+}
+
+entity "Transaction" as tx {
+	* transaction_id : BIGINT <<PK>>
+	--
+	transaction_uuid : CHAR(36) <<UNIQUE>>
+	reference_number : VARCHAR(64) <<UNIQUE>>
+	transaction_type : ENUM
+	status : ENUM
+	customer_id : INT <<FK>>
+	source_account_id : BIGINT <<FK>>
+	destination_account_id : BIGINT <<FK>>
+	card_id : INT <<FK>>
+	merchant_id : BIGINT <<FK>>
+	amount : DECIMAL(18,2)
+	transaction_date : DATETIME
+}
+
+entity "Ledger Entry" as ledger {
+	* ledger_id : BIGINT <<PK>>
+	--
+	account_id : BIGINT <<FK>>
+	transaction_id : BIGINT <<FK>>
+	entry_direction : ENUM
+	amount : DECIMAL(18,2)
+	balance_after : DECIMAL(18,2)
+}
+
+entity "Audit Log" as audit {
+	* audit_id : BIGINT <<PK>>
+	--
+	operation_type : ENUM
+	status : ENUM
+	customer_id : INT <<FK>>
+	account_id : BIGINT <<FK>>
+	transaction_id : BIGINT <<FK>>
+	card_id : INT <<FK>>
+}
+
+' Relationships
+customer ||--o{ account : owns
+customer ||--o{ card : owns
+account ||--o{ card : funds
+customer ||--o{ tx : initiates
+account ||--o{ tx : source_or_destination
+card ||--o{ tx : used_for
+merchant ||--o{ tx : processes
+mcc ||--o{ merchant : categorizes
+account ||--o{ ledger : posts
+tx ||--o{ ledger : records
+customer ||--o{ audit : audited_for
+account ||--o{ audit : audited_for
+tx ||--o{ audit : audited_for
+
+@enduml

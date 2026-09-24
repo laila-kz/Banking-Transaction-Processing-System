@@ -1,0 +1,4 @@
+id,date,client_id,card_id,amount,use_chip,merchant_id,merchant_city,merchant_state,zip,mcc,errors
+0,2023-01-15 08:30:00,0,0,$45.50,Chip,1001,New York,NY,10001,5411,
+1,2023-01-15 12:45:00,0,1,$12.00,Contactless,1002,New York,NY,10002,5812,
+2,2023-01-16 19:10:00,1,2,$120.00,Online,1003,Los Angeles,CA,90001,4829,
